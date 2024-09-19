@@ -9,6 +9,7 @@ import java.util.List;
 
 import banco.db.IConnection;
 import banco.logica.ContaCorrente;
+import banco.logica.ContaPoupanca;
 import banco.logica.IConta;
 
 public class ContaDAOImpl implements ContaDAO {
@@ -34,15 +35,17 @@ public class ContaDAOImpl implements ContaDAO {
     
     @Override
     public void criarConta(String cpf, IConta conta) {
-        String sql = "INSERT INTO Conta (numero, cliente_cpf) VALUES (?, ?)";
+        String sql = "INSERT INTO Conta (numero, cliente_cpf, tipo_conta) VALUES (?, ?, ?)";
         try (PreparedStatement stmt = conn.getConnection().prepareStatement(sql)) {
-            stmt.setString(1, (String) conta.getNumero());  // Número da conta
-            stmt.setString(2, cpf);  // CPF do cliente que será associado
+            stmt.setString(1, (String) conta.getNumero());  
+            stmt.setString(2, cpf);  
+            stmt.setString(3, conta instanceof ContaCorrente ? "Conta Corrente" : "Conta Poupança");  
             stmt.executeUpdate();
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
+
 
     @Override
     public void depositar(String numeroConta, double valor) {
@@ -63,7 +66,7 @@ public class ContaDAOImpl implements ContaDAO {
         try (PreparedStatement stmt = conn.getConnection().prepareStatement(sql)) {
             stmt.setDouble(1, valor);
             stmt.setString(2, numeroConta);
-            stmt.setDouble(3, valor);  // Verifica se o saldo é suficiente
+            stmt.setDouble(3, valor);  
             int rowsAffected = stmt.executeUpdate();
             if (rowsAffected == 0) {
                 System.out.println("Saldo insuficiente.");
@@ -80,31 +83,31 @@ public class ContaDAOImpl implements ContaDAO {
         String sqlDeposito = "UPDATE Conta SET saldo = saldo + ? WHERE numero = ?";
         
         try (Connection conn = this.conn.getConnection()) {
-            conn.setAutoCommit(false);  // Iniciar transação
+            conn.setAutoCommit(false);  
 
             try (PreparedStatement stmtSaque = conn.prepareStatement(sqlSaque);
                  PreparedStatement stmtDeposito = conn.prepareStatement(sqlDeposito)) {
 
-                // Saque da conta de origem
+              
                 stmtSaque.setDouble(1, valor);
                 stmtSaque.setString(2, contaOrigem);
                 stmtSaque.setDouble(3, valor);
                 int rowsAffectedSaque = stmtSaque.executeUpdate();
 
                 if (rowsAffectedSaque == 0) {
-                    conn.rollback();  // Reverte transação se saldo insuficiente
+                    conn.rollback();  
                     System.out.println("Saldo insuficiente para transferência.");
                     return;
                 }
 
-                // Depósito na conta de destino
+                
                 stmtDeposito.setDouble(1, valor);
                 stmtDeposito.setString(2, contaDestino);
                 stmtDeposito.executeUpdate();
 
-                conn.commit();  // Finaliza a transação
+                conn.commit();  
             } catch (SQLException e) {
-                conn.rollback();  // Reverte em caso de erro
+                conn.rollback();  
                 e.printStackTrace();
             }
         } catch (SQLException e) {
@@ -117,7 +120,7 @@ public class ContaDAOImpl implements ContaDAO {
     @Override
     public List<IConta> listarContasPorCliente(String cpf) {
         List<IConta> contas = new ArrayList<>();
-        String sql = "SELECT numero FROM Conta WHERE cliente_cpf = ?";
+        String sql = "SELECT numero, tipo_conta FROM Conta WHERE cliente_cpf = ?";
 
         try (Connection conn = this.conn.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -125,13 +128,20 @@ public class ContaDAOImpl implements ContaDAO {
             ResultSet rs = stmt.executeQuery();
             while (rs.next()) {
                 String numeroConta = rs.getString("numero");
-                contas.add(new ContaCorrente(numeroConta)); // Ajuste conforme a implementação de IConta
+                String tipoConta = rs.getString("tipo_conta");
+
+                if ("Conta Corrente".equals(tipoConta)) {
+                    contas.add(new ContaCorrente(numeroConta));
+                } else if ("Conta Poupança".equals(tipoConta)) {
+                    contas.add(new ContaPoupanca(numeroConta));
+                }
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
         return contas;
     }
+
 
     @Override
     public void removerConta(String cpf, String numeroConta) {

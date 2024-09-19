@@ -9,9 +9,7 @@ import java.util.Random;
 
 public class Transacao implements Serializable {
 	
-	/**
-	 * 
-	 */
+	
 	private static final long serialVersionUID = 1L;
 	private Long id;
 	private BigDecimal valor;

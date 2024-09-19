@@ -75,7 +75,7 @@ public class ClienteDAOImpl implements ClienteDAO {
     public List<Cliente> listarClientes() {
         List<Cliente> clientes = new ArrayList<>();
         String sql = "SELECT * FROM Cliente";
-        try (Statement stmt = conn.getConnection().createStatement(); // Corrigido para usar conn.getConnection()
+        try (Statement stmt = conn.getConnection().createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
                 Cliente cliente = new Cliente();
